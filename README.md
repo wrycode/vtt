@@ -7,7 +7,7 @@
 
 For instance, for me, I ran: `sudo pacman -Sy cmake abseil-cpp grpc curl nlohmann-json just`, plus installed  [google-crc32c](https://aur.archlinux.org/packages/google-crc32c) from the AUR
 
-4. Commands to build and run different components are in flux and documented in [.justfile](.justfile)
+4. Run `just` to build and compile
 
 
 # Enabling virtual keyboard

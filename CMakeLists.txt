@@ -6,29 +6,25 @@ project(vtt)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-set(GOOGLE_CLOUD_CPP_ROOT "extern/google-cloud-cpp")
-list(APPEND CMAKE_PREFIX_PATH "${GOOGLE_CLOUD_CPP_ROOT}/lib/cmake")
-
+# Must run 'just google_compile' first 
+link_directories(${CMAKE_CURRENT_BINARY_DIR}/google-install/lib)
+set(CMAKE_PREFIX_PATH ${CMAKE_CURRENT_BINARY_DIR}/google-install/lib/cmake)
 find_package(google_cloud_cpp_speech REQUIRED)
 
+# Code testing Google's client libraries 
 add_executable(stream stream.cpp)
 target_link_libraries(stream google-cloud-cpp::speech)
-target_include_directories(stream PRIVATE ${GOOGLE_CLOUD_CPP_ROOT}/include/)
+target_include_directories(stream PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/google-install/include/)
+add_dependencies(stream google-cloud-cpp::speech)
 
+# Add executable for write.cpp
+add_executable(write write.cpp)
+target_compile_options(write PRIVATE -Wsign-conversion -Wall -Wextra -Wconversion)
+target_include_directories(write PRIVATE ${PROJECT_SOURCE_DIR}/extern/plog/include)
+
+# symlink of compilation database for IDEs
 add_custom_command(TARGET stream POST_BUILD
                    COMMAND ${CMAKE_COMMAND} -E create_symlink
                    ${CMAKE_BINARY_DIR}/compile_commands.json
                    ${CMAKE_SOURCE_DIR}/compile_commands.json)
 
-include(ExternalProject)
-
-ExternalProject_Add(google-cloud-cpp
-  SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/extern/google-cloud-cpp
-  BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/google-cloud-cpp_build
-  CONFIGURE_COMMAND cmake -S ${CMAKE_CURRENT_SOURCE_DIR}/extern/google-cloud-cpp -B ${CMAKE_CURRENT_BINARY_DIR}/google-cloud-cpp_build -DBUILD_TESTING=OFF -DGOOGLE_CLOUD_CPP_ENABLE_EXAMPLES=OFF -DGOOGLE_CLOUD_CPP_ENABLE=speech -DCMAKE_INSTALL_PREFIX=${CMAKE_CURRENT_BINARY_DIR}/google-cloud-cpp_install
-  BUILD_COMMAND cmake --build ${CMAKE_CURRENT_BINARY_DIR}/google-cloud-cpp_build
-  INSTALL_COMMAND cmake --build ${CMAKE_CURRENT_BINARY_DIR}/google-cloud-cpp_build --target install
-)
-
-# Make sure our main build depends on Google Cloud C++ build
-add_dependencies(stream google-cloud-cpp)
