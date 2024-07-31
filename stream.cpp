@@ -19,7 +19,7 @@ using RecognizeStream = ::google::cloud::AsyncStreamingReadWriteRpc<
 
 g::future<void> ReadTranscript(RecognizeStream& stream, g::CompletionQueue cq) {
   // Wait before requesting from the API for the first time
-  co_await cq.MakeRelativeTimer(std::chrono::seconds(1));
+  // co_await cq.MakeRelativeTimer(std::chrono::seconds(1));
   
   while (true) {
     std::cout << "Attempting to read the response from the stream" << std::endl;
@@ -51,9 +51,8 @@ g::future<void> ReadTranscript(RecognizeStream& stream, g::CompletionQueue cq) {
 }
 
 GstElement* create_gstreamer_pipeline() {
-  std::string pipeline_desc ="autoaudiosrc ! audioconvert ! "
-    "audio/x-raw,format=S16LE,byte-order=little,channels=1,rate=16000 ! "
-    "appsink name=sink";
+  // FYI: https://cloud.google.com/speech-to-text/docs/encoding
+  std::string pipeline_desc ="autoaudiosrc ! audioconvert ! audioresample ! capsfilter caps=audio/x-raw,rate=16000 ! flacenc ! appsink name=sink";
   GError *error = nullptr;
   GstElement* pipeline = gst_parse_launch(pipeline_desc.c_str(), &error);
   if (!pipeline) {
@@ -71,10 +70,15 @@ g::future<void> WriteAudio(RecognizeStream &stream, speech::v1::StreamingRecogni
 
   gst_element_set_state(pipeline, GST_STATE_PLAYING);
 
+  // Any commented out code referencing audioFile can be used instead
+  // of writing to the stream to verify that the audio is recording
+  // correctly.
+  // std::ofstream audioFile("audio.flac", std::ios::binary);
+
   while (true) {
     // time buffer before sending new audio
-    co_await cq.MakeRelativeTimer(std::chrono::seconds(1));
-
+    co_await cq.MakeRelativeTimer(std::chrono::milliseconds(100));
+      
     GstSample* sample;
     GstBuffer* buffer;
     GstMapInfo map;
@@ -84,32 +88,21 @@ g::future<void> WriteAudio(RecognizeStream &stream, speech::v1::StreamingRecogni
       gst_buffer_map(buffer, &map, GST_MAP_READ);
       uint64_t size = gst_buffer_get_size(buffer);
 
-      // Add debug outputs
-      std::cout << "Size after mapping buffer: " << size << "\n";
-
-      std::cout << "Attempting to write audio to the stream" << std::endl; 
-
       if (size > 0) {
-	// request.clear_streaming_config();
-	request.set_audio_content((const char*)map.data, size);
+	request.clear_streaming_config();
+	request.set_audio_content(reinterpret_cast<char*>(map.data), size);
+	// std::cout << "Sending " << size / 1024 << "k bytes." << std::endl;
 
-	if (size >= 1024) {
-	  // std::cout << "Sending " << size << " bytes and " << size / 1024 << "k bytes." << std::endl;  
-	} else {
-	  // std::cout << "Sending " << size << " bytes." << std::endl;  
-	}
 	// Terminate the loop if there is an error in the stream.
 	bool write_success = co_await stream.Write(request, grpc::WriteOptions{});
-	std::cout << "Write successful. write_success=" << write_success << "\n";
+	// std::cout << "write_success=" << write_success << "\n";
 	if (!write_success) {
-	  gst_buffer_unmap(buffer, &map);	  
 	  co_return;
-	}
+	}	
+	// audioFile.write(reinterpret_cast<char*>(map.data), size);	
       } else {
-	std::cerr << "Error: Buffer size is zero" << "\n";
+        std::cerr << "Error: Buffer size is zero" << "\n";
       }
-      std::cout << "Audio written to the stream" << std::endl; 
-            
       gst_buffer_unmap(buffer, &map);
     } else {
       std::cerr << "Sample is null, cannot continue.\n";
@@ -120,6 +113,8 @@ g::future<void> WriteAudio(RecognizeStream &stream, speech::v1::StreamingRecogni
   gst_object_unref(pipeline);
 
   co_await stream.WritesDone();
+  // audioFile.close();
+
 }
 
 // Set up RPC stream with asynchronous reader and writer coroutines
@@ -185,7 +180,9 @@ int main(int argc, char* argv[]) try {
   google::cloud::speech::v1::RecognitionConfig config;
   config.set_language_code("en");
   config.set_sample_rate_hertz(16000);
-  config.set_encoding(google::cloud::speech::v1::RecognitionConfig::LINEAR16);
+  char* envModel = getenv("MODEL_VERSION");
+  config.set_model(envModel ? envModel : "default");
+  config.set_encoding(google::cloud::speech::v1::RecognitionConfig::FLAC);
 
   // Run a streaming transcription. Note that `.get()` blocks until it
   // completes.
