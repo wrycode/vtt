@@ -20,26 +20,22 @@ using RecognizeStream = ::google::cloud::AsyncStreamingReadWriteRpc<
 g::future<void> ReadTranscript(RecognizeStream& stream, g::CompletionQueue cq) {
   // Wait before requesting from the API for the first time
   // co_await cq.MakeRelativeTimer(std::chrono::seconds(1));
-  
-  while (true) {
-    std::cout << "Attempting to read the response from the stream" << std::endl;
 
+  while (true) {
     try {
+      // co_await cq.MakeRelativeTimer(std::chrono::milliseconds(100));
+      // co_await cq.MakeRelativeTimer(std::chrono::seconds(5));
+
       auto response = co_await stream.Read();
 
       if (!response) {
 	std::cerr << "End of transcript or an error occurred." << "\n";
 	co_return;
       }
-      
-      std::cout << "Response recieved ↓↓↓" << std::endl; 
+      std::cout << "StreamingRecognitionResult" << std::endl;
       for (const auto& result : response->results()) {
-	std::cout << "    Size of result: " << result.alternatives().size() << "\n";
-	std::cout << "    Result stability: " << result.stability() << "\n";
-	for (const auto& alternative : result.alternatives()) {
-	  std::cout << "        Confidence: " << alternative.confidence() << "\n";
-	  std::cout << "        Transcript: " << alternative.transcript() << "\n";
-	}
+	std::cout << result.DebugString();
+	std::cout << "=========================\n";
       }
     }
     catch (const std::exception& ex) {
@@ -78,7 +74,7 @@ g::future<void> WriteAudio(RecognizeStream &stream, speech::v1::StreamingRecogni
   while (true) {
     // time buffer before sending new audio
     co_await cq.MakeRelativeTimer(std::chrono::milliseconds(100));
-      
+
     GstSample* sample;
     GstBuffer* buffer;
     GstMapInfo map;
@@ -98,10 +94,10 @@ g::future<void> WriteAudio(RecognizeStream &stream, speech::v1::StreamingRecogni
 	// std::cout << "write_success=" << write_success << "\n";
 	if (!write_success) {
 	  co_return;
-	}	
-	// audioFile.write(reinterpret_cast<char*>(map.data), size);	
+	}
+	// audioFile.write(reinterpret_cast<char*>(map.data), size);
       } else {
-        std::cerr << "Error: Buffer size is zero" << "\n";
+	std::cerr << "Error: Buffer size is zero" << "\n";
       }
       gst_buffer_unmap(buffer, &map);
     } else {
@@ -119,12 +115,14 @@ g::future<void> WriteAudio(RecognizeStream &stream, speech::v1::StreamingRecogni
 
 // Set up RPC stream with asynchronous reader and writer coroutines
 g::future<g::Status> StreamingTranscribe(g::CompletionQueue cq,
-                                         google::cloud::speech::v1::RecognitionConfig config) {  
+					 google::cloud::speech::v1::RecognitionConfig config) {
   // Create a Speech client with the default configuration.
   auto client = speech::SpeechClient (speech::MakeSpeechConnection
 				      (g::Options{}.set<g::GrpcCompletionQueueOption>(cq)));
   speech::v1::StreamingRecognizeRequest request;
   auto& streaming_config = *request.mutable_streaming_config();
+  streaming_config.set_interim_results(true);
+  // streaming_config.enab
   *streaming_config.mutable_config() = std::move(config);
 
   // Get ready to write audio content.  Create the stream, and start it.
@@ -176,13 +174,29 @@ int main(int argc, char* argv[]) try {
     runner.join();
   });
 
-  // Create a RecognitionConfig object with default settings
+
+  // See https://cloud.google.com/speech-to-text/docs/speech-to-text-requests
   google::cloud::speech::v1::RecognitionConfig config;
-  config.set_language_code("en");
-  config.set_sample_rate_hertz(16000);
   char* envModel = getenv("MODEL_VERSION");
-  config.set_model(envModel ? envModel : "default");
+
+  // Some of the RecognitionConfig options take
+  // ::google::protobuf::BoolValue instead of bool so we have to do
+  // this...
+  std::unique_ptr<::google::protobuf::BoolValue> bool_value_ptr =
+    std::make_unique<::google::protobuf::BoolValue>();
+  bool_value_ptr->set_value(true);
+
+  config.set_language_code("en-US");
+  config.set_sample_rate_hertz(16000);
+  config.set_use_enhanced(true);
+  config.set_enable_automatic_punctuation(true);
+  config.set_allocated_enable_spoken_punctuation(bool_value_ptr.get());
+  config.set_allocated_enable_spoken_emojis(bool_value_ptr.get());
+  config.set_enable_word_time_offsets(true);
+  config.set_model(envModel ? envModel : "latest_long"); // https://cloud.google.com/speech-to-text/docs/transcription-model
   config.set_encoding(google::cloud::speech::v1::RecognitionConfig::FLAC);
+  // Note: a few additional options for the StreamingRecognitionConfig
+  // are set in StreamingTranscribe()
 
   // Run a streaming transcription. Note that `.get()` blocks until it
   // completes.
