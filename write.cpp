@@ -225,9 +225,9 @@ void type_unicode(int fd, uint32_t code) {
     }
 }
 
-/* Convert a utf-8 encoded string to a sequence Unicode code points
-   representing each character. We assume str is encoded correctly, so
-   probably unsafe for long-term use.
+/* Convert a utf-8 encoded string to a sequence Unicode code points,
+   one uint32_t per character. We assume str is encoded correctly, so
+   possibly unsafe for long-term use.
 
    Some background reading: https://www.tsmean.com/articles/encoding/unicode-and-utf-8-tutorial-for-dummies/
 */
@@ -304,7 +304,8 @@ int main()
   // Represents one of potentially multiple UTF-8 strings that would be streamed from the Google API
   // std::u8string str = u8"Russian: Привет, мир! Это тестовый текст.(Hello, world! This is test text.)\nArabic: مرحبا بك في العالم! هذا نص تجريبي.";
   std::u8string str = u8"Test Here. Now a Russian word: Привет. Now, let's add some punctuation to our string!"; // ASCII string
-  
+
+  // この壁 何のデザインでしょうか  
   // Inefficient, but easy reason about. In the future, may use a
   // utf-8 aware library to iterate through str directly or convert to
   // a wide with std::codecvt_utf8:

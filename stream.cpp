@@ -35,6 +35,9 @@ g::future<void> ReadTranscript(RecognizeStream& stream, g::CompletionQueue cq) {
       std::cout << "StreamingRecognitionResult" << std::endl;
       for (const auto& result : response->results()) {
 	std::cout << result.DebugString();
+	for (const auto& alternative : result.alternatives()) {
+	  std::cout << "        Transcript: " << alternative.transcript() << "\n";
+	}	
 	std::cout << "=========================\n";
       }
     }
@@ -187,6 +190,7 @@ int main(int argc, char* argv[]) try {
   bool_value_ptr->set_value(true);
 
   config.set_language_code("en-US");
+  // config.set_language_code("ja-JP");
   config.set_sample_rate_hertz(16000);
   config.set_use_enhanced(true);
   config.set_enable_automatic_punctuation(true);
