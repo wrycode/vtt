@@ -1,12 +1,12 @@
 # Build instructions  * 
 1. git clone --recurse-submodules --shallow-submodules https://github.com/wrycode/vtt.git
 
-2. Install development and runtime dependencies for the main code: CMake, GCC, [ICU](https://icu.unicode.org/), [just](https://github.com/casey/just), Gstreamer, probably a few more I've forgotten
+2. Install development and runtime dependencies for the main code: CMake, GCC, [Catch2](https://github.com/catchorg/Catch2), [ICU](https://icu.unicode.org/), [just](https://github.com/casey/just), Gstreamer, probably a few more I've forgotten
 
 3. Install dependencies for the Cloud Speech-to-Text API C++ Client Library: https://github.com/googleapis/google-cloud-cpp/blob/main/doc/packaging.md#required-libraries
 
 On Arch Linux, all the dependencies can be installed with: 
-- `sudo pacman -S cmake abseil-cpp grpc curl nlohmann-json just icu`
+- `sudo pacman -S cmake abseil-cpp grpc curl nlohmann-json just icu catch2`
 - manually install [google-crc32c](https://aur.archlinux.org/packages/google-crc32c) from the AUR
 
 4. Run `just` to build and compile

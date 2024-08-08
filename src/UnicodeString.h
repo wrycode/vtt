@@ -5,6 +5,8 @@
 #include <vector>
 #include <cstdint>
 
+#include <unicode/brkiter.h>
+
 namespace vtt {
 
   // Sequence of one or more Unicode code points that form a
@@ -26,9 +28,9 @@ namespace vtt {
   */
   class UnicodeString {
   public:
-    UnicodeString(const std::string& str, const std::string lcode="en");
+    UnicodeString(const std::string& str, icu::BreakIterator* b);
     const std::string std_string;
-    const std::vector<Rune> runes;    
+    std::vector<Rune> runes;    
     friend std::ostream& operator<<(std::ostream& os, const UnicodeString& obj);
   };
 }
