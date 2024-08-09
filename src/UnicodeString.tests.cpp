@@ -21,6 +21,10 @@ icu::BreakIterator* setup_BreakIterator() {
    one uint32_t per character. Assume str is encoded correctly.
 
    Some background reading: https://www.tsmean.com/articles/encoding/unicode-and-utf-8-tutorial-for-dummies/
+
+   This was originally used when I was building code to type text. I
+   know it works correctly to create code points for iBus, so we use
+   it below to check the validity of our Runes.
 */
 std::vector<uint32_t> convertToUnicode(std::string const& str)
 {
@@ -59,38 +63,36 @@ TEST_CASE("UnicodeString") {
   SECTION("UnicodeString runes are correct") {
     auto ustring = vtt::UnicodeString("👮‍♀️Tëst.👨‍👩‍👦🇺🇸नीநி!", b);
 
-
     std::vector<vtt::Rune> correct_runes = {
-      {0xD83D, 0xDC6E, 0x200D, 0x2640, 0xFE0F},
-      {0x54},
-      {0xEB},
-      {0x73},
-      {0x74},
-      {0x2E},
-      {0xD83D, 0xDC68, 0x200D, 0xD83D, 0xDC69, 0x200D, 0xD83D, 0xDC66},
-      {0xD83C, 0xDDFA, 0xD83C, 0xDDF8},
-      {0x928, 0x940},
-      {0xBA8, 0xBBF},
-      {0x21}
-    };
+      { 0x1f46e, 0x200d, 0x2640, 0xfe0f },
+      { 0x54 },
+      { 0xeb },
+      { 0x73 },
+      { 0x74 },
+      { 0x2e },
+      { 0x1f468, 0x200d, 0x1f469, 0x200d, 0x1f466 },
+      { 0x1f1fa, 0x1f1f8 },
+      { 0x928, 0x940 },
+      { 0xba8, 0xbbf },
+      { 0x21 } };
 
     REQUIRE(ustring.runes == correct_runes);
 
     // Manually decode the UTF8 string, verify that code points match runes
     auto ustring1 = vtt::UnicodeString("👮‍♀️", b);
     
-    // Flattened Runes
+
     std::vector<uint32_t> code_points;
 
+    // flatten Runes into a sequence of code points
     for (vtt::Rune& r : ustring1.runes) {
       for (uint32_t code_point : r) {
 	code_points.push_back(code_point);
       };
     };
 
+    // Code points should be identical to the ones we calculate separately
     REQUIRE(code_points == convertToUnicode(ustring1.std_string));
   }
-
-
   
 }

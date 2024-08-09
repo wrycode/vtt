@@ -32,12 +32,13 @@ add_executable(vtt vtt.cpp src/UnicodeString.cpp)
 target_include_directories(vtt PUBLIC ${ICU_INCLUDE_DIRS} ${PROJECT_SOURCE_DIR}/src )
 target_link_libraries(vtt PRIVATE ${ICU_LIBRARIES})
 
-find_package(Catch2 3 REQUIRED)
 
-add_executable(tests src/UnicodeString.tests.cpp src/UnicodeString.cpp)
+# tests
+find_package(Catch2 3 REQUIRED)
+add_executable(tests
+  src/UnicodeString.tests.cpp src/UnicodeString.cpp)
 target_include_directories(tests PUBLIC ${ICU_INCLUDE_DIRS} ${PROJECT_SOURCE_DIR}/src)
 target_link_libraries(tests PRIVATE Catch2::Catch2WithMain ${ICU_LIBRARIES})
-
 
 # stream.cpp, prototype to live transcribe audio from microphone
 # add_executable(stream stream.cpp)
@@ -51,7 +52,7 @@ target_link_libraries(tests PRIVATE Catch2::Catch2WithMain ${ICU_LIBRARIES})
 # target_include_directories(write PRIVATE ${PROJECT_SOURCE_DIR}/extern/plog/include)
 
 # symlink of compilation database for IDEs
-add_custom_command(TARGET vtt POST_BUILD
+add_custom_command(TARGET tests vtt POST_BUILD
                    COMMAND ${CMAKE_COMMAND} -E create_symlink
                    ${CMAKE_BINARY_DIR}/compile_commands.json
                    ${CMAKE_SOURCE_DIR}/compile_commands.json)
