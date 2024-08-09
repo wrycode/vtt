@@ -1,3 +1,4 @@
-.cache/*
-.build/*
-extern/plog/*
+.cache/
+build/
+extern/plog/
+extern/google-cloud-cpp/

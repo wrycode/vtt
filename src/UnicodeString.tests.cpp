@@ -5,17 +5,7 @@
 #include <unicode/brkiter.h>
 
 #include "UnicodeString.h"
-
-icu::BreakIterator* setup_BreakIterator() {
-  icu::BreakIterator* b;
-  auto lcode = icu::Locale::getDefault();
-  UErrorCode status = U_ZERO_ERROR;
-  b = icu::BreakIterator::createCharacterInstance(lcode, status);
-  if (U_FAILURE(status)) {
-    std::cerr << "Failed to create sentence break iterator. Status: " << u_errorName(status) << std::endl;
-  }
-  return b;
-};
+#include "TranscriptionSegment.h"
 
 /* Convert a utf-8 encoded string to a sequence Unicode code points,
    one uint32_t per character. Assume str is encoded correctly.
@@ -52,7 +42,7 @@ std::vector<uint32_t> convertToUnicode(std::string const& str)
 
 TEST_CASE("UnicodeString") {
 
-  auto b = setup_BreakIterator();
+  auto b = vtt::setup_BreakIterator();
 
   SECTION("UnicodeString constructor works") {
     REQUIRE(vtt::UnicodeString("👮‍♀️Tëst.👨‍👩‍👦🇺🇸नीநி!", b).std_string == "👮‍♀️Tëst.👨‍👩‍👦🇺🇸नीநி!" );
