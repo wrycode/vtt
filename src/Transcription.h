@@ -151,14 +151,14 @@ namespace vtt {
     */
 
     // add operation to queue and return immediately 
-    void applyChange(const std::string& newText);
+    void update(const std::string& newText);
 
     // set final transcript text and move point to the end of the segment,
     // typing all text. Block until all operations are finished.
     applyFinalChange(const std::string& newText);
     /*
     // add final operation to queue
-    applyChange(newText);
+    update(newText);
 
     // block while we wait for the operations queue to flush
     while (len(operations) > 0) {};

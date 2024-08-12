@@ -23,19 +23,17 @@ namespace vtt {
     MovementType type;
     int value;
   };
-
   
-  // a segment operation, point movement or new transcript
+  // a segment operation: move point or update transcript
   using Operation = std::variant<vtt::MoveCommand, std::string>;
-
 
   class TranscriptionSegment {
   public:
     // initialize fields and start main loop which applies operations continuously 
     TranscriptionSegment(int fd);
 
-    /* // add operation to queue and return immediately  */
-    void applyChange(const std::string& newText);
+    // update transcript (returns immediately and lets the class schedule and type the updates)
+    void update(const std::string& newText);
 
     // set final transcript text and move point to the end of the segment,
     // typing all text. Block until all operations are finished.
