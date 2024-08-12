@@ -45,7 +45,7 @@ namespace vtt {
     // and the segment class will handle the queue of tasks
     // independently. It also handles moving the point forward.
       
-    var string latestTranscript
+    var string latestTranscript  // actually might be a different type that includes the language code, we'll tackle that when we get to it
     var duration update_wait = 0.3 seconds;
 
     std::mutex mtx;

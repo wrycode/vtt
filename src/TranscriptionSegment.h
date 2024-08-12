@@ -16,9 +16,18 @@
 namespace vtt {
 
   icu::BreakIterator* setup_BreakIterator();
+
+  enum class MovementType { Relative, Absolute };
+
+  struct MoveCommand {
+    MovementType type;
+    int value;
+  };
+
   
-  // a segment operation, either new point position or new transcript
-  using Operation = std::variant<int, std::string>;
+  // a segment operation, point movement or new transcript
+  using Operation = std::variant<vtt::MoveCommand, std::string>;
+
 
   class TranscriptionSegment {
   public:
@@ -26,28 +35,33 @@ namespace vtt {
     TranscriptionSegment(int fd);
 
     /* // add operation to queue and return immediately  */
-    /* void applyChange(const std::string& newText); */
+    void applyChange(const std::string& newText);
 
-    /* // set final transcript text and move point to the end of the segment, */
-    /* // typing all text. Block until all operations are finished. */
-    /* applyFinalChange(const std::string& newText); */
-    vtt::UnicodeString text; // Sequence of Unicode characters representing this part of audio
+    // set final transcript text and move point to the end of the segment,
+    // typing all text. Block until all operations are finished.
+    void applyFinalChange(const std::string& newText);
+    vtt::UnicodeString* text; // Sequence of Unicode characters representing this part of audio
     
   private:
     // Move point (cursor) in the text, deleting or typing as necessary. 
-    void movePoint(size_t new_point);
+    void movePoint(vtt::MoveCommand mc);
     /* void ndeletes(int n); */
     /* /\* type  sequence of characters*\/ */
     /* void type_unicode([]rune); */
 
+    // coroutine to periodically send operations that move the cursor forward
+    void move_forward();
+
     // coroutine to continuously process the operations until we apply the final change
-    void process_changes();
+    void process_operations();
 
     int keyboard_fd;	// file descriptor from /dev/uinput. Initialized in Transcription() and passed to Segment constructor  
     size_t point_;     // Current location-of cursor within text_
     bool finished_;     // set after applyFinalChange runs as a signal for main loop to end
+    bool stop_moving_;     // bool used to stop the move_forward() coroutine
     std::queue<Operation> operations_;
-    std::future<void> process_changes_future;
+    std::future<void> process_operations_future;
+    std::future<void> move_forward_future;
   };
 
 }

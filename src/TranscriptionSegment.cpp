@@ -9,8 +9,17 @@
 #include <iostream>
 #include <string>
 
+// number of milliseconds to wait before moving the cursor forward (typing speed)
+constexpr int MOVE_FORWARD_DELAY { 300 };
+
 namespace vtt
 {
+
+  // ICU docs recommend reusing each BreakIterator which we are not
+  // doing. Not seeing a performance hit when creating one with each
+  // segment, but we can pursue that optimization if needed. Also, may
+  // need to customize the BreakIterator locale for certain languages
+  // later.
   icu::BreakIterator* setup_BreakIterator()
   {
     icu::BreakIterator* b;
@@ -25,37 +34,51 @@ namespace vtt
 
   TranscriptionSegment::TranscriptionSegment(int fd)
     : keyboard_fd {fd},
-      text(vtt::UnicodeString("", vtt::setup_BreakIterator())),
+      text(new vtt::UnicodeString("", vtt::setup_BreakIterator())),
       point_ {0},
-      finished_ {false}
+      finished_ {false},
+      stop_moving_ {false}
   {
+    // Attempt to move the cursor forward every x seconds
+    move_forward_future = std::async(std::launch::async, &TranscriptionSegment::move_forward, this);
+
     // Start the processing loop for this segment
-    process_changes_future = std::async(std::launch::async, &TranscriptionSegment::process_changes, this);
+    process_operations_future = std::async(std::launch::async, &TranscriptionSegment::process_operations, this);
   };
 
-  // void TranscriptionSegment::applyChange(const std::string& newText) {
-  //   // push operation to queue;
-  // };
+  void TranscriptionSegment::applyChange(const std::string& newText) {
+    // push operation to queue;
+    Operation change = newText;
+    operations_.push(change);
+  };
 
-  // TranscriptionSegment::applyFinalChange(const std::string& newText) {
-  //   // add final operation to queue
-  //   applyChange(newText);
+  void TranscriptionSegment::applyFinalChange(const std::string& newText) {
+    // add final operation to queue
+    applyChange(newText);
 
-  //   // move curser to end
-  //   movePoint(len(text.runes))
+    // stop continuously moving the cursor forward so we can finish up
+    stop_moving_ = true;
+    // Also need to check the futures for move_forward and process_operations, maybe in this function, not sure
 
-  //   // block while we wait for the operations queue to flush
-  //   while (len(operations) > 0) {};
+    // Need to create this redundant unicodestring here to make sure we have the correct length
+    vtt::UnicodeString* new_string = new vtt::UnicodeString(newText, vtt::setup_BreakIterator());
 
-  //   // end the main segment loop
-  //   finished = true;
-  //     };
+    vtt::MoveCommand mc = { MovementType::Absolute, new_string->runes.size() + 1 };
+    operations_.push(mc);  // move curser to end
 
-  void TranscriptionSegment::movePoint(size_t new_point)
+    // wait for the operations queue to flush
+    while (!operations_.empty()) {};
+
+    // end the main segment loop
+    finished_ = true;
+  };
+
+  void TranscriptionSegment::movePoint(vtt::MoveCommand mc)
   {
-    // dummy
+    std::cout << "movePoint: " << mc.value << "\n"; // dummy
     return;
-  }
+  };
+
   //   /*
   //   // check that point is between 0 and text.len() - 1 inclusive;
   //   // return exception or error otherwise
@@ -80,19 +103,18 @@ namespace vtt
   // void TranscriptionSegment::type_unicode([]rune) {
   // };
 
-  // continuously pop and apply changes from the operations queue,
-  // periodically moving the cursor forward.
-  void TranscriptionSegment::process_changes()
-  {
-
-    for (int i = 0;i < 10;i ++) {
-      using namespace std::chrono_literals;
-      std::cout << "Coroutine started" << std::endl;
-      std::this_thread::sleep_for(1s); // Simulating a long-running task
-      std::cout << "Coroutine finished" << std::endl;
-
+  // periodically move the cursor forward
+  void TranscriptionSegment::move_forward() {
+    while (!stop_moving_) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(MOVE_FORWARD_DELAY));
+      vtt::MoveCommand mc = { MovementType::Relative, 1 };
+      operations_.push(mc);
     };
+  };
 
+  // continuously pop and apply changes from the operations queue
+  void TranscriptionSegment::process_operations()
+  {
     while (!finished_)
       {
 	// TODO: need to implement moving the cursor forward, probably
@@ -103,24 +125,26 @@ namespace vtt
 	  {
 	    auto op = operations_.front();
 	    operations_.pop();
-	    if (std::holds_alternative<int>(op))
+	    if (std::holds_alternative<vtt::MoveCommand>(op))
 	    {
-	      movePoint(std::get<int>(op));
+	      vtt::MoveCommand m = std::get<vtt::MoveCommand>(op);
+	      movePoint(m);
 	    } else // Update segment text, first moving point back to last unchanged character if necessary
 		{
-		  auto new_string = vtt::UnicodeString(std::get<std::string>(op), vtt::setup_BreakIterator());
-
+		  vtt::UnicodeString* new_string = new vtt::UnicodeString(std::get<std::string>(op), vtt::setup_BreakIterator());
 		  int i = 0;			// point of divergence
 
-		  while (text.runes[i] == new_string.runes[i] && i < point_) // need to adjust to account for different lengths of strings
+		  while (text->runes[i] == new_string->runes[i] && i < point_) // need to adjust to account for different lengths of strings
 		    {
 		      i++;
 		    };
 		  if (point_ > i)
 		    {
-		      movePoint(i);
+		      vtt::MoveCommand mc = { MovementType::Absolute, i };
+		      movePoint(mc);
 		    };
 		  text = new_string;
+		  std::cout << "string updated to : " << *text << "\n";
 		};
 	  };
       };
