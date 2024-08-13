@@ -1,8 +1,17 @@
+/* If we build a non-keyboard interface, we can reimplement this class
+  with all of the keyboard stuff yanked out, or alternatively just
+  direct the keyboard input stream to /dev/null. If we anticipate
+  multiple alternative interfaces, we could implement subclassing
+  (e.g. KeyboardTranscriptionSegment or GuiTranscriptionSegment), but
+  for now it doesn't really seem worth it.
+*/
+
+
+
 #ifndef VTT_TRANSCRIPTIONSEGMENT_H_
 #define VTT_TRANSCRIPTIONSEGMENT_H_
 
 #include "UnicodeString.h"
-
 
 #include <unicode/brkiter.h>
 #include <unicode/unistr.h>
@@ -12,6 +21,7 @@
 #include <cstdint>
 #include <queue>
 #include <future>
+
 
 namespace vtt {
 
