@@ -136,14 +136,14 @@ namespace vtt
     // std::cout << "pressing key " << code << " with keyboard fd " << fd << "\n";
     send_event(fd, EV_KEY, code, 1);  // Key press
     send_event(fd, EV_SYN, SYN_REPORT, 0); // report the event
-    usleep(5000); // 5ms delay
+    usleep(10000); // 5ms delay
   }
 
   // Helper function to release a key
   void Keyboard::release_key(__u16 code) {
     send_event(fd, EV_KEY, code, 0);  // Key release
     send_event(fd, EV_SYN, SYN_REPORT, 0);
-    usleep(5000); // 5ms delay
+    usleep(10000); // 5ms delay
   }
 
   Keyboard::Keyboard() {
