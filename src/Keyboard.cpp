@@ -132,7 +132,7 @@ namespace vtt
   }
 
   // Helper function to press a key
-  constexpr void Keyboard::press_key(__u16 code) {
+  void Keyboard::press_key(__u16 code) {
     // std::cout << "pressing key " << code << " with keyboard fd " << fd << "\n";
     send_event(fd, EV_KEY, code, 1);  // Key press
     send_event(fd, EV_SYN, SYN_REPORT, 0); // report the event
@@ -140,7 +140,7 @@ namespace vtt
   }
 
   // Helper function to release a key
-  constexpr void Keyboard::release_key(__u16 code) {
+  void Keyboard::release_key(__u16 code) {
     send_event(fd, EV_KEY, code, 0);  // Key release
     send_event(fd, EV_SYN, SYN_REPORT, 0);
     usleep(5000); // 5ms delay

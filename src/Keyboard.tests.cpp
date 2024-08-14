@@ -1,56 +1,53 @@
 #include <catch2/catch_test_macros.hpp>
-// #include <catch2/trompeloeil.hpp>
+#include <catch/fakeit.hpp>
 
-#include <unistd.h>
+// #include <unistd.h>
 
 #include "Keyboard.h"
 #include "test_common.h"
+
 #include <fstream>
 #include <cstring>
 #include <iostream>
+#include <cstdint>
+#include <vector>
+
+// https://github.com/eranpeer/FakeIt/wiki/Quickstart
+using namespace fakeit;
 
 TEST_CASE("type_input") {
+
+  vtt::Keyboard keeb;
   
-  auto k = vtt::Keyboard();
+  // Mock setup
+  Mock<vtt::Keyboard> mock(keeb);
+
+  std::vector<__u16> keycodes;
+
+  std::vector<__u16> expected_keycodes = {2, 3, 4};
+    // { vtt::ascii_keys.find('1')[0],
+    //   vtt::ascii_keys.find('2')[0],
+    //   vtt::ascii_keys.find('3')[0]
+    // };
+    
+  When(Method(mock,press_key)).AlwaysDo([&keycodes](auto code){ keycodes.push_back(code);});
+  When(Method(mock, release_key)).AlwaysReturn();
+  
+  // Fetch the mock instance.
+  vtt::Keyboard &k = mock.get();
+
   std::string str = "123";
-  // ""Russian: Привет, мир! Это тестовый текст.(Hello, world! This is test text.)\nArabic: مرحبا بك في العالم! هذا نص تجريبي.";
   std::vector<uint32_t> code_points = vtt::test::convertToUnicode(str);
   for (size_t i = 0; i < code_points.size(); ++i)
     {
       k.type(code_points[i]);
     }
 
-  // =======================================
-  // int fake_fd[2];
-  // pipe(fake_fd); // fake_fd[1] is the writing end, fake_fd[0] is the reading end
+  Verify(Method(mock,press_key)).Exactly(3);
 
-  // // Use fake_fd[1] in place of your /dev/uinput file descriptor
+  // std::cout << keycodes << "<- keycodes \n";
 
-  // // int fd  = vtt::get_keyboard_fd();
-  // // Represents one of potentially multiple UTF-8 strings that would be streamed from the Google API
-
-  // std::string str = "T"; // ASCII string
-
-  // // この壁 何のデザインでしょうか  
-  // // Inefficient, but easy reason about. In the future, may use a
-  // // utf-8 aware library to iterate through str directly or convert to
-  // // a wide with std::codecvt_utf8:
-
-  // vtt::ndeletes(fake_fd[1], 7);
-  // // Give userspace some time to read the events before we destroy the
-  // // device with UI_DEV_DESTROY.
-
-  // char buffer[1024];
-  // ssize_t bytesRead = read(fake_fd[0], buffer, 1024);
-  // if (bytesRead > 0) {
-  //   // Process the data in the buffer
-  //   std::string data(buffer, bytesRead);
-  //   std::cout << data << "\n";
-  // }
-
-
-  // vtt::close_keyboard(fd);
-
-  REQUIRE(0 == 0);
+  
+  REQUIRE(keycodes == expected_keycodes);
   
 }
