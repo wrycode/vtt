@@ -12,6 +12,7 @@
 #define VTT_TRANSCRIPTIONSEGMENT_H_
 
 #include "UnicodeString.h"
+#include "Keyboard.h"
 
 #include <unicode/brkiter.h>
 #include <unicode/unistr.h>
@@ -40,7 +41,7 @@ namespace vtt {
   class TranscriptionSegment {
   public:
     // initialize fields and start main loop which applies operations continuously 
-    TranscriptionSegment(int fd);
+    TranscriptionSegment(Keyboard keyboard);
 
     // update transcript (returns immediately and lets the class schedule and type the updates)
     void update(const std::string& newText);
@@ -63,7 +64,7 @@ namespace vtt {
     // coroutine to continuously process the operations until we apply the final change
     void process_operations();
 
-    int keyboard_fd;	// file descriptor from /dev/uinput. Initialized in Transcription() and passed to Segment constructor  
+    Keyboard keyboard_;	// Keyboard instance. Initialized in Transcription() and passed to Segment constructor  
     size_t point_;     // Current location-of cursor within text_
     bool finished_;     // set after applyFinalChange runs as a signal for main loop to end
     bool stop_moving_;     // bool used to stop the move_forward() coroutine

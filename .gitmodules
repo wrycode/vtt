@@ -4,3 +4,6 @@
 [submodule "extern/google-cloud-cpp"]
 	path = extern/google-cloud-cpp
 	url = https://github.com/googleapis/google-cloud-cpp.git
+[submodule "extern/trompeloeil"]
+	path = extern/trompeloeil
+	url = https://github.com/rollbear/trompeloeil.git

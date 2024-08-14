@@ -37,10 +37,10 @@ find_package(Catch2 3 REQUIRED)
 add_executable(tests
   src/UnicodeString.tests.cpp src/UnicodeString.cpp
   src/TranscriptionSegment.tests.cpp src/TranscriptionSegment.cpp
-  src/type_input.tests.cpp src/type_input.cpp
+  src/Keyboard.tests.cpp src/Keyboard.cpp
   src/test_common.cpp
 )
-target_include_directories(tests PUBLIC ${ICU_INCLUDE_DIRS} ${PROJECT_SOURCE_DIR}/src)
+target_include_directories(tests PUBLIC ${ICU_INCLUDE_DIRS} ${PROJECT_SOURCE_DIR}/src ${PROJECT_SOURCE_DIR}/extern/trompeloeil/include)
 target_link_libraries(tests PRIVATE Catch2::Catch2WithMain ${ICU_LIBRARIES})
 
 # stream.cpp, prototype to live transcribe audio from microphone

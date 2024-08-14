@@ -1,5 +1,6 @@
 #include "TranscriptionSegment.h"
 #include "UnicodeString.h"
+#include "Keyboard.h"
 
 #include <unicode/unistr.h>
 #include <unicode/brkiter.h>
@@ -9,6 +10,7 @@
 #include <iostream>
 #include <string>
 #include <cassert>
+#include <ranges>
 
 // number of milliseconds to wait before moving the cursor forward (typing speed)
 constexpr int MOVE_FORWARD_DELAY { 300 };
@@ -35,8 +37,8 @@ namespace vtt
     return b;
   };
 
-  TranscriptionSegment::TranscriptionSegment(int fd)
-    : keyboard_fd {fd},
+  TranscriptionSegment::TranscriptionSegment(Keyboard keyboard)
+    : keyboard_ {keyboard},
       text(new vtt::UnicodeString("", vtt::setup_BreakIterator())),
       point_ {0},
       finished_ {false},
@@ -108,17 +110,17 @@ namespace vtt
 
     if (mc.type == MovementType::Relative)
       {
-	std::cout << "movePoint relative movement: " << mc.value << "\n";
+	// std::cout << "movePoint relative movement: " << mc.value << "\n";
 	new_point = point_ + mc.value;
 	// We do this here to keep move_forward from pushing through
 	// the end of the text.
 	new_point = std::min(new_point, text->runes.size());
-	std::cout << "movePoint calculated point: " << new_point << "\n";	
+	// std::cout << "movePoint calculated point: " << new_point << "\n";	
 	// Lower down we fail if we're receiving absolute positions
 	// that are out of bounds because that indicates incorrect
 	// calculations leading to incorrect input for this method
       } else {
-      std::cout << "movePoint - absolute position: " << mc.value << "\n";
+      // std::cout << "movePoint - absolute position: " << mc.value << "\n";
       new_point = mc.value;
     };
 
@@ -127,19 +129,20 @@ namespace vtt
 
     point_ = new_point;
     
-    //   if (old_point > new_point) {
-    //   ndeletes(old_point - new_point)
-    //   } else {
-    //   // will need to figure out the actual syntax to range over the vector, should be easy
-    //   type_unicode(text.runes[old_point:new_point])
-    //   };
+    if (old_point > new_point) {
+      keyboard_.ndeletes(old_point - new_point);
+	} else {
+      for (uint32_t code_point : std::views::join(std::span{text->runes}.subspan(old_point, (new_point - old_point + 1)))) {
+	keyboard_.type(code_point);
+	  };
+    };
   };
 
   
   /* Continuously pop and apply changes from the operations queue.
 
      !!!!!!!
-     This is the only method that should modify text field
+     This is the only method that should modify 'text' field
      !!!!!!!
   */
   void TranscriptionSegment::process_operations()
@@ -170,7 +173,7 @@ namespace vtt
 		    movePoint(mc);
 		  };
 		text = new_string;
-		std::cout << "string updated to : " << *text << "\n";
+		// std::cout << "string updated to : " << *text << "\n";
 	      };
 	  };
       };
