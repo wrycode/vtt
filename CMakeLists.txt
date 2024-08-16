@@ -29,8 +29,9 @@ link_directories(${GSTREAMER_LIBRARY_DIRS})
 # vtt.cpp entrypoint, currently testing various components
 find_package(ICU COMPONENTS io i18n uc REQUIRED)
 add_executable(vtt vtt.cpp src/UnicodeString.cpp src/TranscriptionSegment.cpp src/Keyboard.cpp)
-target_include_directories(vtt PUBLIC ${ICU_INCLUDE_DIRS} ${PROJECT_SOURCE_DIR}/src )
-target_link_libraries(vtt PRIVATE ${ICU_LIBRARIES})
+target_include_directories(vtt PUBLIC ${ICU_INCLUDE_DIRS} ${PROJECT_SOURCE_DIR}/src ${CMAKE_CURRENT_BINARY_DIR}/google-install/include/)
+target_link_libraries(vtt PRIVATE ${ICU_LIBRARIES} google-cloud-cpp::speech ${GSTREAMER_LIBRARIES})
+add_dependencies(vtt google-cloud-cpp::speech)
 
 # tests
 find_package(Catch2 3 REQUIRED)

@@ -13,7 +13,7 @@
 #include <ranges>
 
 // number of milliseconds to wait before moving the cursor forward (typing speed)
-constexpr int MOVE_FORWARD_DELAY { 300 };
+constexpr int MOVE_FORWARD_DELAY { 40 };
 // number of characters to type when we move the cursor forward
 constexpr int MOVE_FORWARD_AMOUNT { 5 };
 
@@ -176,7 +176,7 @@ namespace vtt
 		    movePoint(mc);
 		  };
 		text = new_string;
-		std::cout << "string updated to : " << *text << "\n";
+		// std::cout << "string updated to : " << *text << "\n";
 	      };
 	  };
       };
