@@ -28,7 +28,7 @@ link_directories(${GSTREAMER_LIBRARY_DIRS})
 
 # vtt.cpp entrypoint, currently testing various components
 find_package(ICU COMPONENTS io i18n uc REQUIRED)
-add_executable(vtt vtt.cpp src/UnicodeString.cpp)
+add_executable(vtt vtt.cpp src/UnicodeString.cpp src/TranscriptionSegment.cpp src/Keyboard.cpp)
 target_include_directories(vtt PUBLIC ${ICU_INCLUDE_DIRS} ${PROJECT_SOURCE_DIR}/src )
 target_link_libraries(vtt PRIVATE ${ICU_LIBRARIES})
 

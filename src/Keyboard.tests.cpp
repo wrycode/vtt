@@ -50,7 +50,8 @@ TEST_CASE("Keyboard") {
   
 }
 
-// Won't execute by default (since it actually starts typing), see
+// Won't execute by default (since it actually starts typing, which
+// could be unexpected or cause problems), see
 // https://github.com/catchorg/Catch2/blob/devel/docs/command-line.md#specifying-which-tests-to-run
 TEST_CASE("Keyboard with real typing", "[.actually_type]") { 
 

@@ -128,22 +128,26 @@ namespace vtt
     */
     ie.time.tv_sec = 0;
     ie.time.tv_usec = 0;
-    write(fd, &ie, sizeof(ie));
+    // printf("Sending event: fd=%d type=%d, code=%d, value=%d\n", fd, type, code, val);
+    ssize_t bytes_written = write(fd, &ie, sizeof(ie));
+    // std::cout << "Bytes written: " << bytes_written << "\n";
+    if (bytes_written == -1) {
+      perror("write");
+    }
   }
 
   // Helper function to press a key
   void Keyboard::press_key(__u16 code) {
-    // std::cout << "pressing key " << code << " with keyboard fd " << fd << "\n";
     send_event(fd, EV_KEY, code, 1);  // Key press
     send_event(fd, EV_SYN, SYN_REPORT, 0); // report the event
-    usleep(10000); // 5ms delay
+    usleep(5000);
   }
 
   // Helper function to release a key
   void Keyboard::release_key(__u16 code) {
     send_event(fd, EV_KEY, code, 0);  // Key release
     send_event(fd, EV_SYN, SYN_REPORT, 0);
-    usleep(10000); // 5ms delay
+    usleep(5000);
   }
 
   Keyboard::Keyboard() {
@@ -153,8 +157,7 @@ namespace vtt
       {
 	// PLOGE << "Failed to open /dev/uinput";
 	perror("Failed to open /dev/uinput");
-	// TODO: panic instead
-	// return errno;   
+	// TODO: properly manage failure
       }
 
     // enable key press/release events
@@ -176,6 +179,12 @@ namespace vtt
 
     ioctl(fd, UI_DEV_SETUP, &usetup);
     ioctl(fd, UI_DEV_CREATE);
+
+    // Text below is from
+    // https://kernel.org/doc/html/v4.12/input/uinput.html
+
+    // So far no problems without this extra sleep
+
     /*
      * On UI_DEV_CREATE the kernel will create the device node for this
      * device. We are inserting a pause here so that userspace has time
@@ -183,10 +192,11 @@ namespace vtt
      * the event, otherwise it will not notice the event we are about
      * to send. This pause is only needed in our example code!
      */
-    sleep(1);
+    // std::cout << "initializing keyboard with fd: " << fd << "\n";
+    // sleep(1);
     return;
   };
-  
+
   Keyboard::~Keyboard() {
     sleep(1);
     ioctl(fd, UI_DEV_DESTROY);
@@ -204,7 +214,6 @@ namespace vtt
      * @param code The Unicode code for the character to be typed.
      */
   void Keyboard::type(uint32_t code) {
-    
     // std::cout << "trying to type " << code << "\n";
 
     // Check if we can type some ASCII characters directly
@@ -270,4 +279,3 @@ namespace vtt
     };
   };
 }
-

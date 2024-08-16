@@ -22,7 +22,7 @@
 #include <cstdint>
 #include <queue>
 #include <future>
-
+#include <mutex>
 
 namespace vtt {
 
@@ -41,7 +41,7 @@ namespace vtt {
   class TranscriptionSegment {
   public:
     // initialize fields and start main loop which applies operations continuously 
-    TranscriptionSegment(Keyboard keyboard);
+    TranscriptionSegment(Keyboard &keyboard);
 
     // update transcript (returns immediately and lets the class schedule and type the updates)
     void update(const std::string& newText);
@@ -54,9 +54,6 @@ namespace vtt {
   private:
     // Move point (cursor) in the text, deleting or typing as necessary. 
     void movePoint(vtt::MoveCommand mc);
-    /* void ndeletes(int n); */
-    /* /\* type  sequence of characters*\/ */
-    /* void type_unicode([]rune); */
 
     // coroutine to periodically send operations that move the cursor forward
     void move_forward();
@@ -64,10 +61,11 @@ namespace vtt {
     // coroutine to continuously process the operations until we apply the final change
     void process_operations();
 
-    Keyboard keyboard_;	// Keyboard instance. Initialized in Transcription() and passed to Segment constructor  
+    Keyboard &keyboard_;	// Keyboard instance. Initialized in Transcription() and passed to Segment constructor  
     size_t point_;     // Current location-of cursor within text_
     bool finished_;     // set after applyFinalChange runs as a signal for main loop to end
     bool stop_moving_;     // bool used to stop the move_forward() coroutine
+    std::mutex operations_mtx;
     std::queue<Operation> operations_;
     std::future<void> process_operations_future;
     std::future<void> move_forward_future;

@@ -37,7 +37,7 @@ namespace vtt
     return b;
   };
 
-  TranscriptionSegment::TranscriptionSegment(Keyboard keyboard)
+  TranscriptionSegment::TranscriptionSegment(Keyboard &keyboard)
     : keyboard_ {keyboard},
       text(new vtt::UnicodeString("", vtt::setup_BreakIterator())),
       point_ {0},
@@ -53,8 +53,10 @@ namespace vtt
 
   void TranscriptionSegment::update(const std::string& newText) {
     // push operation to queue;
+    std::lock_guard<std::mutex> guard(operations_mtx);
     Operation change = newText;
     operations_.push(change);
+    return;
   };
 
   void TranscriptionSegment::applyFinalChange(const std::string& newText) {
@@ -68,7 +70,7 @@ namespace vtt
     vtt::UnicodeString* new_string = new vtt::UnicodeString(newText, vtt::setup_BreakIterator());
 
     // vtt::MoveCommand mc = { MovementType::Absolute, new_string->runes.size()};
-    vtt::MoveCommand mc = { MovementType::Absolute, static_cast<int>(new_string->runes.size())};    
+    vtt::MoveCommand mc = { MovementType::Absolute, static_cast<int>(new_string->runes.size())};
     operations_.push(mc);  // move curser to end
 
     // wait for the operations queue to flush
@@ -79,26 +81,22 @@ namespace vtt
 
     // TODO: wait and assert that both futures are finished before
     // returning.
+    process_operations_future.wait();
+    move_forward_future.wait();
   };
-
-  // void TranscriptionSegment::ndeletes(int n) {
-  //   /* Press the delete key n times */
-  // };
-
-  // void TranscriptionSegment::type_unicode([]rune) {
-  // };
 
   // periodically move the cursor forward
   void TranscriptionSegment::move_forward() {
     while (!stop_moving_) {
       std::this_thread::sleep_for(std::chrono::milliseconds(MOVE_FORWARD_DELAY));
       vtt::MoveCommand mc = { MovementType::Relative, MOVE_FORWARD_AMOUNT };
+      std::lock_guard<std::mutex> guard(operations_mtx);
       operations_.push(mc);
     };
   };
 
   /* Attempt to move point_ to the relative or absolute position
-     specified, calling ndeletes/type_unicode as needed. 
+     specified, calling ndeletes/type_unicode as needed.
 
      !!!!!!!
      This is the only method that should modify point_
@@ -115,7 +113,8 @@ namespace vtt
 	// We do this here to keep move_forward from pushing through
 	// the end of the text.
 	new_point = std::min(new_point, text->runes.size());
-	// std::cout << "movePoint calculated point: " << new_point << "\n";	
+	if (new_point != point_)
+	  // std::cout << "moving forward to: " << new_point << "\n";
 	// Lower down we fail if we're receiving absolute positions
 	// that are out of bounds because that indicates incorrect
 	// calculations leading to incorrect input for this method
@@ -128,17 +127,17 @@ namespace vtt
     assert(new_point <= text->runes.size() && new_point >= 0);
 
     point_ = new_point;
-    
+
     if (old_point > new_point) {
+      std::cout << "deleting from " << old_point << " to " << new_point << "\n";
       keyboard_.ndeletes(old_point - new_point);
 	} else {
-      for (uint32_t code_point : std::views::join(std::span{text->runes}.subspan(old_point, (new_point - old_point + 1)))) {
+      for (uint32_t code_point : std::views::join(std::span{text->runes}.subspan(old_point, (new_point - old_point )))) {
 	keyboard_.type(code_point);
-	  };
+      };
     };
   };
 
-  
   /* Continuously pop and apply changes from the operations queue.
 
      !!!!!!!
@@ -149,6 +148,10 @@ namespace vtt
   {
     while (!finished_)
       {
+	// TODO: I'm not positive the operations_ mutex is strictly
+	// necessary, should review that when I go over this whole
+	// file to rewrite/clean up
+	std::lock_guard<std::mutex> guard(operations_mtx);
 	if (!operations_.empty())
 	  {
 	    auto op = operations_.front();
@@ -173,7 +176,7 @@ namespace vtt
 		    movePoint(mc);
 		  };
 		text = new_string;
-		// std::cout << "string updated to : " << *text << "\n";
+		std::cout << "string updated to : " << *text << "\n";
 	      };
 	  };
       };
