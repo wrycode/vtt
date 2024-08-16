@@ -113,7 +113,7 @@ namespace vtt
 	// We do this here to keep move_forward from pushing through
 	// the end of the text.
 	new_point = std::min(new_point, text->runes.size());
-	if (new_point != point_)
+	// if (new_point != point_)
 	  // std::cout << "moving forward to: " << new_point << "\n";
 	// Lower down we fail if we're receiving absolute positions
 	// that are out of bounds because that indicates incorrect

@@ -140,14 +140,14 @@ namespace vtt
   void Keyboard::press_key(__u16 code) {
     send_event(fd, EV_KEY, code, 1);  // Key press
     send_event(fd, EV_SYN, SYN_REPORT, 0); // report the event
-    usleep(5000);
+    usleep(10000);
   }
 
   // Helper function to release a key
   void Keyboard::release_key(__u16 code) {
     send_event(fd, EV_KEY, code, 0);  // Key release
     send_event(fd, EV_SYN, SYN_REPORT, 0);
-    usleep(5000);
+    usleep(10000);
   }
 
   Keyboard::Keyboard() {
@@ -183,7 +183,6 @@ namespace vtt
     // Text below is from
     // https://kernel.org/doc/html/v4.12/input/uinput.html
 
-    // So far no problems without this extra sleep
 
     /*
      * On UI_DEV_CREATE the kernel will create the device node for this
@@ -193,7 +192,13 @@ namespace vtt
      * to send. This pause is only needed in our example code!
      */
     // std::cout << "initializing keyboard with fd: " << fd << "\n";
-    // sleep(1);
+
+    // Upon testing, the sleep is not actually necessary for the
+    // program to work because there is some lag between creating the
+    // keyboard and sending events, but it is necessary for unit tests
+    // where we use the keyboard immediately, plus better safe than sorry.
+
+    usleep(100000);
     return;
   };
 
